@@ -2,19 +2,30 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
+	// "github.com/cortlando/youtube-downloader/internal/sqlite"
+
 	"github.com/joho/godotenv"
 	"github.com/lrstanley/go-ytdlp"
+
+	_ "github.com/mattn/go-sqlite3"
 )
+
+var DB_PATH string = "./downloadedfiles.db"
 
 type extractedVideoInfo struct {
 	Title      string
-	ID         string
+	Video_ID   string
 	WebpageURL string
 	// UploadDate string
+}
+
+type Env struct {
+	videos YoutubeVideoModel
 }
 
 func loadEnvVar() {
@@ -40,7 +51,7 @@ func extractString(s *string) string {
 
 func printVideos(videolist []extractedVideoInfo) {
 	for _, v := range videolist {
-		fmt.Printf("Title: %s, ID: %s, URL: %s\n", v.Title, v.ID, v.WebpageURL)
+		fmt.Printf("Title: %s, ID: %s, URL: %s\n", v.Title, v.Video_ID, v.WebpageURL)
 	}
 }
 
@@ -96,12 +107,53 @@ func getVideosfromYoutubePlaylist() []extractedVideoInfo {
 
 func main() {
 	loadEnvVar()
+	db, err := sql.Open("sqlite3", DB_PATH)
 
-	ytdlp.Install(context.TODO(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// fmt.Printf("AAAAAAAAAAAA")
+	defer db.Close()
+
+	env := &Env{
+		videos: YoutubeVideoModel{DB: db},
+	}
+
+	// env.getVideosFromDB()
+
+	// ytdlp.Install(context.TODO(), nil)
+
+	fmt.Printf("AAAAAAAAAAAA")
 	var extractedVideosFromPlaylist []extractedVideoInfo = getVideosfromYoutubePlaylist()
 	printVideos(extractedVideosFromPlaylist)
 
-	// fmt.Println("Done")
+	env.initializeDB()
+	env.videos.createYoutubeVideoTableIfNotExist()
+	env.videos.testInsertIntoTable()
+
+	fmt.Println("Done")
 }
+
+func (env *Env) initializeDB() {
+	env.videos.CheckIfDBFIleExists()
+}
+
+func (env *Env) initializeYoutubeTable() {
+	err := env.videos.createYoutubeVideoTableIfNotExist()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (env *Env) testquery() {
+	err := env.videos.testInsertIntoTable()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// func (env *Env) getVideosFromDB() {
+
+// }

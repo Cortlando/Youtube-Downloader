@@ -22,6 +22,8 @@ RUN go mod download
 
 COPY cmd/Youtube-Downloader/main.go ./
 
+COPY cmd/Youtube-Downloader/sqlite.go ./
+
 RUN CGO_ENABLED=1 GOOS=linux go build -o /youtube-downloader
 
 CMD ["/youtube-downloader"]
