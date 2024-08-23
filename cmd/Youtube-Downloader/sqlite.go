@@ -11,6 +11,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const rfc3339Milli = "2006-01-02T15:04:05.000Z07:00"
+
+type YoutubeVideo struct {
+	Title         string
+	Video_ID      string
+	WebpageURL    string
+	download_date string
+}
+
 type YoutubeVideoModel struct {
 	DB *sql.DB
 }
@@ -33,65 +42,20 @@ func (m YoutubeVideoModel) CheckIfDBFIleExists() {
 
 func (m YoutubeVideoModel) createYoutubeVideoTableIfNotExist() error {
 
-	// tx, err := m.DB.BeginTx(context.TODO(), nil)
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// defer tx.Rollback()
-	// stmt := `CREATE TABLE IF NOT EXISTS youtubevideos(
-	// 	Title TEXT,
-	// 	video_id TEXT PRIMARY KEY,
-	// 	 webpage_url TEXT,
-	// 	 download_date TEXT
-	// 	 )`
-	// i, err := tx.ExecContext(context.TODO(), stmt)
-
-	// println(i)
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// tx.Commit()
-
 	// return err
 	stmt := `CREATE TABLE IF NOT EXISTS youtubevideos(
 		Title TEXT,
 		video_id TEXT PRIMARY KEY,
 		 webpage_url TEXT,
-		 download_date TEXT
-		 )`
+		 download_date TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ'))
+		 ) strict`
 	i, err := m.DB.Exec(stmt)
 	println(i)
 	return err
 }
 
 func (m YoutubeVideoModel) testInsertIntoTable() error {
-	_, err := m.DB.Exec(`INSERT INTO youtubevideos(title, video_id, webpage_url, download_date) values('a','a','a','a')`)
+	_, err := m.DB.Exec(`INSERT INTO youtubevideos(title, video_id, webpage_url) values('a','a','a')`)
 
 	return err
 }
-
-// func (m YoutubeVideoModel) All() ([]extractedVideoInfo, error) {
-// 	rows, err := m.DB.Query("SELECT title, id, webpageurl FROM YOUTUBEVIDEOS")
-
-// 	return rows, err
-// }
-
-// func (m YoutubeVideoModel) ConnectDB() error {
-// 	db, err := sql.Open("sqlite3", "./test.db")
-// 	defer db.Close()
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	if err = db.Ping(); err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	return db.Ping()
-
-// }

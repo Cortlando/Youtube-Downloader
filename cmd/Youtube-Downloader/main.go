@@ -15,7 +15,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var DB_PATH string = "./downloadedfiles.db"
+var DB_PATH string = "./downloadedfiles.db?_journal=WAL&_timeout=5000"
 
 type extractedVideoInfo struct {
 	Title      string
