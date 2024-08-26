@@ -130,7 +130,11 @@ func main() {
 	env.initializeDB()
 	env.videos.createYoutubeVideoTableIfNotExist()
 	env.videos.testInsertIntoTable()
+	videolist, err := env.videos.testSelectFromTable()
 
+	for _, v := range videolist {
+		fmt.Print(v)
+	}
 	fmt.Println("Done")
 }
 

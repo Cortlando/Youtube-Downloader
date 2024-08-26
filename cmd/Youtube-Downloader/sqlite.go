@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"os"
 
@@ -14,7 +15,7 @@ import (
 const rfc3339Milli = "2006-01-02T15:04:05.000Z07:00"
 
 type YoutubeVideo struct {
-	Title         string
+	title         string
 	Video_ID      string
 	WebpageURL    string
 	download_date string
@@ -55,7 +56,45 @@ func (m YoutubeVideoModel) createYoutubeVideoTableIfNotExist() error {
 }
 
 func (m YoutubeVideoModel) testInsertIntoTable() error {
-	_, err := m.DB.Exec(`INSERT INTO youtubevideos(title, video_id, webpage_url) values('a','a','a')`)
+	_, err := m.DB.Exec(`INSERT INTO youtubevideos(title, video_id, webpage_url) values('b','b','b')`)
 
 	return err
+}
+
+func (m YoutubeVideoModel) testSelectFromTable() ([]YoutubeVideo, error) {
+	rows, err := m.DB.Query("SELECT * FROM  youtubevideos")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var videos []YoutubeVideo
+
+	for rows.Next() {
+		var video YoutubeVideo
+		if err := rows.Scan(&video.title, &video.Video_ID, &video.WebpageURL, &video.download_date); err != nil {
+			return videos, err
+		}
+
+		videos = append(videos, video)
+	}
+
+	if err = rows.Err(); err != nil {
+		return videos, err
+	}
+
+	return videos, nil
+
+}
+
+func parseDownloadDate(s string) (string, error) {
+	parsedTime, err := time.Parse(rfc3339Milli, s)
+
+	if err != nil {
+		return "", err
+	}
+
+	return parsedTime.UTC().String(), nil
 }
