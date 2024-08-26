@@ -89,6 +89,33 @@ func (m YoutubeVideoModel) testSelectFromTable() ([]YoutubeVideo, error) {
 
 }
 
+func (m YoutubeVideoModel) getAllYoutubeVideoIDs() ([]string, error) {
+	rows, err := m.DB.Query("SELECT video_id FROM  youtubevideos")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var videoIDs []string
+
+	for rows.Next() {
+		var id string
+
+		err := rows.Scan(&id)
+
+		if err != nil {
+			return videoIDs, err
+		}
+
+		videoIDs = append(videoIDs, id)
+	}
+
+	return videoIDs, err
+
+}
+
 func parseDownloadDate(s string) (string, error) {
 	parsedTime, err := time.Parse(rfc3339Milli, s)
 

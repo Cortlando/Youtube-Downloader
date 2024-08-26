@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 
 	// "github.com/cortlando/youtube-downloader/internal/sqlite"
 
@@ -130,11 +131,21 @@ func main() {
 	env.initializeDB()
 	env.videos.createYoutubeVideoTableIfNotExist()
 	env.videos.testInsertIntoTable()
-	videolist, err := env.videos.testSelectFromTable()
+	// videolist, err := env.videos.testSelectFromTable()
 
-	for _, v := range videolist {
-		fmt.Print(v)
+	// for _, v := range videolist {
+	// 	fmt.Print(v)
+	// }
+
+	vidsInDB, err := env.videos.getAllYoutubeVideoIDs()
+
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
+
+	fmt.Print(vidsToDownload)
 	fmt.Println("Done")
 }
 
@@ -156,6 +167,26 @@ func (env *Env) testquery() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// Checks videos currently in playlist to videos in db
+// returns slice that contains all videos in playlist that are not in db
+func comparePlaylistAndDB(yt []extractedVideoInfo, db []string) []string {
+	var videosToDownload []string
+
+	for _, v := range yt {
+
+		// if i > len(db) {
+		// 	break
+		// }
+
+		if !slices.Contains(db, v.Video_ID) {
+			videosToDownload = append(videosToDownload, v.Video_ID)
+		}
+	}
+
+	return videosToDownload
+
 }
 
 // func (env *Env) getVideosFromDB() {

@@ -22,5 +22,6 @@ go.work
 
 .env
 downloadedfiles.db
-.db-shm
-.db-wal
+*.db-wal
+
+*.db-shm
