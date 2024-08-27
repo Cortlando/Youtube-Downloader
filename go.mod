@@ -7,6 +7,11 @@ require github.com/lrstanley/go-ytdlp v0.0.0-20240806045119-9eb8f929a173
 require github.com/mattn/go-sqlite3 v1.14.22
 
 require (
+	github.com/dropbox/dropbox-sdk-go-unofficial/v6 v6.0.5 // indirect
+	golang.org/x/oauth2 v0.22.0 // indirect
+)
+
+require (
 	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/cloudflare/circl v1.3.9 // indirect
 	github.com/joho/godotenv v1.5.1

@@ -27,6 +27,7 @@ type extractedVideoInfo struct {
 
 type Env struct {
 	videos YoutubeVideoModel
+	drop   dropboxModel
 }
 
 func loadEnvVar() {
@@ -116,15 +117,13 @@ func main() {
 
 	defer db.Close()
 
+	dropboxUser := auth()
+
 	env := &Env{
 		videos: YoutubeVideoModel{DB: db},
+		drop:   dropboxUser,
 	}
 
-	// env.getVideosFromDB()
-
-	// ytdlp.Install(context.TODO(), nil)
-
-	fmt.Printf("AAAAAAAAAAAA")
 	var extractedVideosFromPlaylist []extractedVideoInfo = getVideosfromYoutubePlaylist()
 	printVideos(extractedVideosFromPlaylist)
 
@@ -132,10 +131,6 @@ func main() {
 	env.videos.createYoutubeVideoTableIfNotExist()
 	env.videos.testInsertIntoTable()
 	// videolist, err := env.videos.testSelectFromTable()
-
-	// for _, v := range videolist {
-	// 	fmt.Print(v)
-	// }
 
 	vidsInDB, err := env.videos.getAllYoutubeVideoIDs()
 
@@ -145,8 +140,14 @@ func main() {
 
 	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
 
+	err = env.drop.getAccount()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Print(vidsToDownload)
-	fmt.Println("Done")
+
 }
 
 func (env *Env) initializeDB() {
