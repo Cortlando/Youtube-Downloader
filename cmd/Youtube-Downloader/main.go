@@ -117,7 +117,7 @@ func main() {
 
 	defer db.Close()
 
-	dropboxUser := auth()
+	dropboxUser := initDropbox()
 
 	env := &Env{
 		videos: YoutubeVideoModel{DB: db},
@@ -147,6 +147,13 @@ func main() {
 	}
 
 	fmt.Print(vidsToDownload)
+
+	var path string = "./big.test"
+	err = env.drop.uploadFile(&path)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }
 

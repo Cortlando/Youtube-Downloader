@@ -25,3 +25,5 @@ downloadedfiles.db
 *.db-wal
 
 *.db-shm
+.test
+test.txt
