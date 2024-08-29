@@ -1,4 +1,4 @@
-package main
+package drop
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 
 const singleShotUploadSizeCutoff int64 = 32 * (1 << 20)
 
-type dropboxModel struct {
+type DropboxModel struct {
 	user users.Client
 	file files.Client
 }
@@ -29,7 +29,7 @@ type uploadChunk struct {
 // TODO: Rework all this code becase returning users.New doesn't make sense,
 // I could return a users.New and files.new and put them in the same struct??????
 // Have to see if thats worth it or not
-func initDropbox() dropboxModel {
+func InitDropbox() DropboxModel {
 	token := os.Getenv("ACCESS_TOKEN")
 	config := dropbox.Config{
 		Token:    token,
@@ -38,14 +38,14 @@ func initDropbox() dropboxModel {
 	dbUser := users.New(config)
 	dbFiles := files.New(config)
 
-	return dropboxModel{
+	return DropboxModel{
 		user: dbUser,
 		file: dbFiles,
 	}
 
 }
 
-func (d dropboxModel) getAccount() error {
+func (d DropboxModel) GetAccount() error {
 	if resp, err := d.user.GetCurrentAccount(); err != nil {
 		return err
 	} else {
@@ -55,7 +55,7 @@ func (d dropboxModel) getAccount() error {
 	return nil
 }
 
-func (d dropboxModel) uploadFile(filepath *string) error {
+func (d DropboxModel) UploadFile(filepath *string) error {
 	//Opens file
 
 	file, err := os.Open(*filepath)
@@ -101,7 +101,7 @@ func (d dropboxModel) uploadFile(filepath *string) error {
 	}
 }
 
-func (d dropboxModel) uploadLargeFile(sizeOfFile int64, file io.Reader, commitInfo *files.CommitInfo) error {
+func (d DropboxModel) uploadLargeFile(sizeOfFile int64, file io.Reader, commitInfo *files.CommitInfo) error {
 	//Size of data chucks being sent
 	chunkSize := int64(4194304)
 	//Sets upload session arguments
@@ -173,7 +173,7 @@ func (d dropboxModel) uploadLargeFile(sizeOfFile int64, file io.Reader, commitIn
 	return nil
 }
 
-func (d dropboxModel) uploadOneChunk(args *files.UploadSessionAppendArg, data []byte) error {
+func (d DropboxModel) uploadOneChunk(args *files.UploadSessionAppendArg, data []byte) error {
 	for {
 		//Uploads another chunk
 		err := d.file.UploadSessionAppendV2(args, bytes.NewReader(data))

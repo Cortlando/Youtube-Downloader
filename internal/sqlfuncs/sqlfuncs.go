@@ -1,4 +1,4 @@
-package main
+package sqlfuncs
 
 import (
 	"database/sql"
@@ -25,6 +25,10 @@ type YoutubeVideoModel struct {
 	DB *sql.DB
 }
 
+const (
+	DB_PATH string = "./downloadedfiles.db?_journal=WAL&_timeout=5000"
+)
+
 func (m YoutubeVideoModel) CheckIfDBFIleExists() {
 	if _, err := os.Stat(DB_PATH); err == nil {
 		fmt.Println("DB File exists")
@@ -41,7 +45,7 @@ func (m YoutubeVideoModel) CheckIfDBFIleExists() {
 
 }
 
-func (m YoutubeVideoModel) createYoutubeVideoTableIfNotExist() error {
+func (m YoutubeVideoModel) CreateYoutubeVideoTableIfNotExist() error {
 
 	// return err
 	stmt := `CREATE TABLE IF NOT EXISTS youtubevideos(
@@ -55,13 +59,13 @@ func (m YoutubeVideoModel) createYoutubeVideoTableIfNotExist() error {
 	return err
 }
 
-func (m YoutubeVideoModel) testInsertIntoTable() error {
+func (m YoutubeVideoModel) TestInsertIntoTable() error {
 	_, err := m.DB.Exec(`INSERT INTO youtubevideos(title, video_id, webpage_url) values('b','b','b')`)
 
 	return err
 }
 
-func (m YoutubeVideoModel) testSelectFromTable() ([]YoutubeVideo, error) {
+func (m YoutubeVideoModel) TestSelectFromTable() ([]YoutubeVideo, error) {
 	rows, err := m.DB.Query("SELECT * FROM  youtubevideos")
 
 	if err != nil {
@@ -89,7 +93,7 @@ func (m YoutubeVideoModel) testSelectFromTable() ([]YoutubeVideo, error) {
 
 }
 
-func (m YoutubeVideoModel) getAllYoutubeVideoIDs() ([]string, error) {
+func (m YoutubeVideoModel) GetAllYoutubeVideoIDs() ([]string, error) {
 	rows, err := m.DB.Query("SELECT video_id FROM  youtubevideos")
 
 	if err != nil {

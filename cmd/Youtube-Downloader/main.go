@@ -1,33 +1,23 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"slices"
 
-	// "github.com/cortlando/youtube-downloader/internal/sqlite"
+	"github.com/cortlando/youtube-downloader/internal/drop"
+	"github.com/cortlando/youtube-downloader/internal/sqlfuncs"
+	"github.com/cortlando/youtube-downloader/internal/youtube"
 
 	"github.com/joho/godotenv"
-	"github.com/lrstanley/go-ytdlp"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var DB_PATH string = "./downloadedfiles.db?_journal=WAL&_timeout=5000"
-
-type extractedVideoInfo struct {
-	Title      string
-	Video_ID   string
-	WebpageURL string
-	// UploadDate string
-}
-
 type Env struct {
-	videos YoutubeVideoModel
-	drop   dropboxModel
+	youtubevideomodel sqlfuncs.YoutubeVideoModel
+	drop              drop.DropboxModel
 }
 
 func loadEnvVar() {
@@ -37,79 +27,9 @@ func loadEnvVar() {
 	}
 }
 
-func loadEnvUrlVar() string {
-	url := os.Getenv("URL")
-
-	return url
-}
-
-func extractString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-
-}
-
-func printVideos(videolist []extractedVideoInfo) {
-	for _, v := range videolist {
-		fmt.Printf("Title: %s, ID: %s, URL: %s\n", v.Title, v.Video_ID, v.WebpageURL)
-	}
-}
-
-func getVideosfromYoutubePlaylist() []extractedVideoInfo {
-	youtubePlaylistUrl := loadEnvUrlVar()
-
-	dl := ytdlp.New().
-		PrintJSON().
-		FlatPlaylist().
-		// GetID().
-		// GetDuration().
-		// GetTitle().
-		// GetURL().
-
-		// NoProgress().
-		// FormatSort("ba").
-		ExtractAudio().
-		// GetTitle().
-		AudioQuality("0").
-		// RecodeVideo("mp4").
-		// NoPlaylist().
-		// NoOverwrites().
-		Continue()
-		// Output("%(extractor)s - %(title)s.%(ext)s")
-
-	playlist, err := dl.Run(context.TODO(), youtubePlaylistUrl)
-	videosInPlaylist, err2 := playlist.GetExtractedInfo()
-
-	var extractedVideosFromPlaylist []extractedVideoInfo
-
-	for i, _ := range videosInPlaylist {
-		var video = extractedVideoInfo{
-			string(*videosInPlaylist[i].Title),
-			string(videosInPlaylist[i].ID),
-			string(*videosInPlaylist[i].WebpageURL),
-		}
-
-		// fmt.Print(video)
-		extractedVideosFromPlaylist = append(extractedVideosFromPlaylist, video)
-		// extracted_info = append(extracted_info, video)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	if err2 != nil {
-		panic(err)
-	}
-
-	return extractedVideosFromPlaylist
-
-}
-
 func main() {
 	loadEnvVar()
-	db, err := sql.Open("sqlite3", DB_PATH)
+	db, err := sql.Open("sqlite3", sqlfuncs.DB_PATH)
 
 	if err != nil {
 		log.Fatal(err)
@@ -117,22 +37,22 @@ func main() {
 
 	defer db.Close()
 
-	dropboxUser := initDropbox()
+	dropboxUser := drop.InitDropbox()
 
 	env := &Env{
-		videos: YoutubeVideoModel{DB: db},
-		drop:   dropboxUser,
+		youtubevideomodel: sqlfuncs.YoutubeVideoModel{DB: db},
+		drop:              dropboxUser,
 	}
 
-	var extractedVideosFromPlaylist []extractedVideoInfo = getVideosfromYoutubePlaylist()
-	printVideos(extractedVideosFromPlaylist)
+	var extractedVideosFromPlaylist []youtube.ExtractedVideoInfo = youtube.GetVideosfromYoutubePlaylist()
+	youtube.PrintVideos(extractedVideosFromPlaylist)
 
 	env.initializeDB()
-	env.videos.createYoutubeVideoTableIfNotExist()
-	env.videos.testInsertIntoTable()
+	env.youtubevideomodel.CreateYoutubeVideoTableIfNotExist()
+	env.youtubevideomodel.TestInsertIntoTable()
 	// videolist, err := env.videos.testSelectFromTable()
 
-	vidsInDB, err := env.videos.getAllYoutubeVideoIDs()
+	vidsInDB, err := env.youtubevideomodel.GetAllYoutubeVideoIDs()
 
 	if err != nil {
 		log.Fatal(err)
@@ -140,7 +60,7 @@ func main() {
 
 	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
 
-	err = env.drop.getAccount()
+	err = env.drop.GetAccount()
 
 	if err != nil {
 		log.Fatal(err)
@@ -148,8 +68,8 @@ func main() {
 
 	fmt.Print(vidsToDownload)
 
-	var path string = "./big.test"
-	err = env.drop.uploadFile(&path)
+	var path string = "./test.txt"
+	err = env.drop.UploadFile(&path)
 
 	if err != nil {
 		log.Fatal(err)
@@ -158,11 +78,11 @@ func main() {
 }
 
 func (env *Env) initializeDB() {
-	env.videos.CheckIfDBFIleExists()
+	env.youtubevideomodel.CheckIfDBFIleExists()
 }
 
 func (env *Env) initializeYoutubeTable() {
-	err := env.videos.createYoutubeVideoTableIfNotExist()
+	err := env.youtubevideomodel.CreateYoutubeVideoTableIfNotExist()
 
 	if err != nil {
 		log.Fatal(err)
@@ -170,7 +90,7 @@ func (env *Env) initializeYoutubeTable() {
 }
 
 func (env *Env) testquery() {
-	err := env.videos.testInsertIntoTable()
+	err := env.youtubevideomodel.TestInsertIntoTable()
 
 	if err != nil {
 		log.Fatal(err)
@@ -179,7 +99,7 @@ func (env *Env) testquery() {
 
 // Checks videos currently in playlist to videos in db
 // returns slice that contains all videos in playlist that are not in db
-func comparePlaylistAndDB(yt []extractedVideoInfo, db []string) []string {
+func comparePlaylistAndDB(yt []youtube.ExtractedVideoInfo, db []string) []string {
 	var videosToDownload []string
 
 	for _, v := range yt {
@@ -196,7 +116,3 @@ func comparePlaylistAndDB(yt []extractedVideoInfo, db []string) []string {
 	return videosToDownload
 
 }
-
-// func (env *Env) getVideosFromDB() {
-
-// }
