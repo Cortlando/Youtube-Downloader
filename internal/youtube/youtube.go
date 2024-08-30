@@ -22,6 +22,10 @@ func init() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	ytdlp.MustInstall(context.TODO(), nil)
+
+	fmt.Print("Initizlized environment variable in youtube package")
 }
 
 func loadEnvUrlVar() string {
@@ -32,7 +36,7 @@ func loadEnvUrlVar() string {
 
 func GetVideosfromYoutubePlaylist() []ExtractedVideoInfo {
 	youtubePlaylistUrl := loadEnvUrlVar()
-
+	fmt.Print("1")
 	dl := ytdlp.New().
 		PrintJSON().
 		FlatPlaylist().
@@ -50,14 +54,16 @@ func GetVideosfromYoutubePlaylist() []ExtractedVideoInfo {
 		// NoPlaylist().
 		// NoOverwrites().
 		Continue()
-		// Output("%(extractor)s - %(title)s.%(ext)s")
-
+	// Output("%(extractor)s - %(title)s.%(ext)s")
+	// fmt.Print("2")
 	playlist, err := dl.Run(context.TODO(), youtubePlaylistUrl)
-	videosInPlaylist, err2 := playlist.GetExtractedInfo()
+	// fmt.Print("3")
+	videosInPlaylist, _ := playlist.GetExtractedInfo()
 
+	// fmt.Print(videosInPlaylist)
 	var extractedVideosFromPlaylist []ExtractedVideoInfo
 
-	for i, _ := range videosInPlaylist {
+	for i := range videosInPlaylist {
 		var video = ExtractedVideoInfo{
 			string(*videosInPlaylist[i].Title),
 			string(videosInPlaylist[i].ID),
@@ -68,14 +74,16 @@ func GetVideosfromYoutubePlaylist() []ExtractedVideoInfo {
 		extractedVideosFromPlaylist = append(extractedVideosFromPlaylist, video)
 		// extracted_info = append(extracted_info, video)
 	}
+
+	fmt.Print(playlist)
+
 	if err != nil {
+		fmt.Print("ERROR WENT OFF")
 		panic(err)
 	}
 
-	if err2 != nil {
-		panic(err)
-	}
-
+	fmt.Print(dl)
+	fmt.Print(youtubePlaylistUrl)
 	return extractedVideosFromPlaylist
 
 }

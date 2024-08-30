@@ -96,6 +96,8 @@ func (d DropboxModel) UploadFile(filepath *string) error {
 
 		fmt.Print(res)
 
+		fmt.Print("Finished uploading")
+
 		return err
 
 	}

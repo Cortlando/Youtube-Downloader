@@ -10,8 +10,6 @@ import (
 	"github.com/cortlando/youtube-downloader/internal/sqlfuncs"
 	"github.com/cortlando/youtube-downloader/internal/youtube"
 
-	"github.com/joho/godotenv"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -20,15 +18,15 @@ type Env struct {
 	drop              drop.DropboxModel
 }
 
-func loadEnvVar() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-}
+// func loadEnvVar() {
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Fatal("Error loading .env file")
+// 	}
+// }
 
 func main() {
-	loadEnvVar()
+	// loadEnvVar()
 	db, err := sql.Open("sqlite3", sqlfuncs.DB_PATH)
 
 	if err != nil {
@@ -68,7 +66,7 @@ func main() {
 
 	fmt.Print(vidsToDownload)
 
-	var path string = "./test.txt"
+	var path string = "./test2.txt"
 	err = env.drop.UploadFile(&path)
 
 	if err != nil {
