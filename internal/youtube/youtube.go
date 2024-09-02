@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/joho/godotenv"
 	"github.com/lrstanley/go-ytdlp"
@@ -95,29 +96,37 @@ func PrintVideos(videolist []ExtractedVideoInfo) {
 	}
 }
 
-// TODO: Make this function download 1 video
-// TODO: Use go routines
-func DownloadYoutubeVideos(videosToDownload []string) {
+func DownloadYoutubeVideos(videosToDownload []string) []error {
+	wg := sync.WaitGroup{}
 
-	dl := ytdlp.New().
-		FlatPlaylist().
-		ExtractAudio().
-		AudioQuality("0").
-		Paths("/downloads").
-		Continue()
-	for _, v := range videosToDownload {
-		ytString := "https://www.youtube.com/watch?v="
-		ytString += v
-		result, err := dl.Run(context.TODO(), ytString)
+	errCh := make(chan error, 1)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Print(result)
+	for _, video := range videosToDownload {
+		wg.Add(1)
+		go downloadYoutubeVideo(video, &wg, errCh)
 	}
+
+	go func() {
+		wg.Wait()
+
+		close(errCh)
+	}()
+
+	var errorList []error
+	for e := range errCh {
+		if e != nil {
+
+			errorList = append(errorList, e)
+		}
+
+	}
+
+	return errorList
 }
 
-func downloadYoutubeVideo(videoId string) error {
+func downloadYoutubeVideo(videoId string, wg *sync.WaitGroup, errCh chan<- error) error {
+
+	defer wg.Done()
 	dl := ytdlp.New().
 		FlatPlaylist().
 		ExtractAudio().
@@ -132,9 +141,7 @@ func downloadYoutubeVideo(videoId string) error {
 
 	result, err := dl.Run(context.TODO(), ytString.String())
 
-	if err != nil {
-		return err
-	}
+	errCh <- err
 	fmt.Print(result)
 
 	return nil
