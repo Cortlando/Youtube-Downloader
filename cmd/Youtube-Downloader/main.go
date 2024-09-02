@@ -18,13 +18,6 @@ type Env struct {
 	drop              drop.DropboxModel
 }
 
-// func loadEnvVar() {
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Fatal("Error loading .env file")
-// 	}
-// }
-
 func main() {
 	// loadEnvVar()
 	db, err := sql.Open("sqlite3", sqlfuncs.DB_PATH)
@@ -47,8 +40,7 @@ func main() {
 
 	env.initializeDB()
 	env.youtubevideomodel.CreateYoutubeVideoTableIfNotExist()
-	env.youtubevideomodel.TestInsertIntoTable()
-	// videolist, err := env.videos.testSelectFromTable()
+	// env.youtubevideomodel.TestInsertIntoTable()
 
 	vidsInDB, err := env.youtubevideomodel.GetAllYoutubeVideoIDs()
 
@@ -58,21 +50,22 @@ func main() {
 
 	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
 
-	err = env.drop.GetAccount()
+	// err = env.drop.GetAccount()
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	fmt.Print(vidsToDownload)
 
-	var path string = "./test2.txt"
-	err = env.drop.UploadFile(&path)
+	// var path string = "./test2.txt"
+	// err = env.drop.UploadFile(&path)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
+	youtube.DownloadYoutubeVideos(vidsToDownload)
 }
 
 func (env *Env) initializeDB() {

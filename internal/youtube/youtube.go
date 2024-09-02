@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/lrstanley/go-ytdlp"
@@ -92,4 +93,50 @@ func PrintVideos(videolist []ExtractedVideoInfo) {
 	for _, v := range videolist {
 		fmt.Printf("Title: %s, ID: %s, URL: %s\n", v.Title, v.Video_ID, v.WebpageURL)
 	}
+}
+
+// TODO: Make this function download 1 video
+// TODO: Use go routines
+func DownloadYoutubeVideos(videosToDownload []string) {
+
+	dl := ytdlp.New().
+		FlatPlaylist().
+		ExtractAudio().
+		AudioQuality("0").
+		Paths("/downloads").
+		Continue()
+	for _, v := range videosToDownload {
+		ytString := "https://www.youtube.com/watch?v="
+		ytString += v
+		result, err := dl.Run(context.TODO(), ytString)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(result)
+	}
+}
+
+func downloadYoutubeVideo(videoId string) error {
+	dl := ytdlp.New().
+		FlatPlaylist().
+		ExtractAudio().
+		AudioQuality("0").
+		Paths("/downloads").
+		Continue()
+
+	var ytString strings.Builder
+
+	ytString.WriteString("https://www.youtube.com/watch?v=")
+	ytString.WriteString(videoId)
+
+	result, err := dl.Run(context.TODO(), ytString.String())
+
+	if err != nil {
+		return err
+	}
+	fmt.Print(result)
+
+	return nil
+
 }

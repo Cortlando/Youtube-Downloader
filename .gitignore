@@ -27,3 +27,5 @@ downloadedfiles.db
 *.db-shm
 .test
 test.txt
+
+.db
