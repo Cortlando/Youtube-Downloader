@@ -28,6 +28,6 @@ downloadedfiles.db
 .test
 test.txt
 
-.db
+*.db
 
 /downloads
