@@ -16,6 +16,7 @@ type ExtractedVideoInfo struct {
 	Title      string
 	Video_ID   string
 	WebpageURL string
+	Extension  string
 	// UploadDate string
 }
 
@@ -27,7 +28,7 @@ func init() {
 
 	ytdlp.MustInstall(context.TODO(), nil)
 
-	fmt.Print("Initizlized environment variable in youtube package")
+	fmt.Println("Initizlized environment variable in youtube package")
 }
 
 func loadEnvUrlVar() string {
@@ -37,112 +38,126 @@ func loadEnvUrlVar() string {
 }
 
 func GetVideosfromYoutubePlaylist() []ExtractedVideoInfo {
+	fmt.Println("Running GetVideosfromYoutubePlaylist")
 	youtubePlaylistUrl := loadEnvUrlVar()
-	fmt.Print("1")
+
 	dl := ytdlp.New().
 		PrintJSON().
 		FlatPlaylist().
-		// GetID().
-		// GetDuration().
-		// GetTitle().
-		// GetURL().
-
-		// NoProgress().
-		// FormatSort("ba").
 		ExtractAudio().
-		// GetTitle().
 		AudioQuality("0").
-		// RecodeVideo("mp4").
-		// NoPlaylist().
-		// NoOverwrites().
 		Continue()
-	// Output("%(extractor)s - %(title)s.%(ext)s")
-	// fmt.Print("2")
+
 	playlist, err := dl.Run(context.TODO(), youtubePlaylistUrl)
-	// fmt.Print("3")
+	fmt.Println(playlist)
 	videosInPlaylist, _ := playlist.GetExtractedInfo()
 
-	// fmt.Print(videosInPlaylist)
 	var extractedVideosFromPlaylist []ExtractedVideoInfo
 
 	for i := range videosInPlaylist {
+
 		var video = ExtractedVideoInfo{
-			string(*videosInPlaylist[i].Title),
+			//Removes forward slashes because they cause uploading to break
+			strings.ReplaceAll(*videosInPlaylist[i].Title, "/", " "),
 			string(videosInPlaylist[i].ID),
 			string(*videosInPlaylist[i].WebpageURL),
+			string(*videosInPlaylist[i].URL),
 		}
 
+		fmt.Println(string(videosInPlaylist[i].Extension))
 		// fmt.Print(video)
 		extractedVideosFromPlaylist = append(extractedVideosFromPlaylist, video)
 		// extracted_info = append(extracted_info, video)
 	}
 
-	fmt.Print(playlist)
+	// fmt.Print(playlist)
 
 	if err != nil {
 		fmt.Print("ERROR WENT OFF")
 		panic(err)
 	}
 
-	fmt.Print(dl)
-	fmt.Print(youtubePlaylistUrl)
+	// cleanVideoTitles(&extractedVideosFromPlaylist)
+	// fmt.Print(dl)
+	// fmt.Print(youtubePlaylistUrl)
 	return extractedVideosFromPlaylist
 
 }
 
 func PrintVideos(videolist []ExtractedVideoInfo) {
 	for _, v := range videolist {
-		fmt.Printf("Title: %s, ID: %s, URL: %s\n", v.Title, v.Video_ID, v.WebpageURL)
+		fmt.Printf("Title: %s, ID: %s, URL: %s, Ext: %s", v.Title, v.Video_ID, v.WebpageURL, v.Extension)
 	}
 }
 
-func DownloadYoutubeVideos(videosToDownload []string) []error {
+// TODO: Figure out what is causing the program to freeze
+// I think its something to do with errCH
+func DownloadYoutubeVideos(videosToDownload []ExtractedVideoInfo) (map[string]ExtractedVideoInfo, []error) {
 	wg := sync.WaitGroup{}
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, len(videosToDownload))
+	videoCh := make(chan ExtractedVideoInfo, len(videosToDownload))
+	// var downloadedVideos []ExtractedVideoInfo
+	var downloadedVideos = make(map[string]ExtractedVideoInfo)
+	var errorList []error
 
 	for _, video := range videosToDownload {
 		wg.Add(1)
-		go downloadYoutubeVideo(video, &wg, errCh)
+		go downloadYoutubeVideo(video, &wg, errCh, videoCh)
 	}
 
 	go func() {
 		wg.Wait()
-
+		// fmt.Print(len(errCh))
+		// fmt.Print(len(videoCh))
+		close(videoCh)
 		close(errCh)
 	}()
 
-	var errorList []error
-	for e := range errCh {
-		if e != nil {
+	if len(errCh) > 0 {
+		for e := range errCh {
+			if e != nil {
 
-			errorList = append(errorList, e)
+				errorList = append(errorList, e)
+			}
+
 		}
+	}
+
+	//Returns a map with the id as key, since the downloaded video titles are there id
+	//I'll be able to link the file to its corresponding struct
+	for v := range videoCh {
+
+		downloadedVideos[v.Video_ID] = v
 
 	}
 
-	return errorList
+	return downloadedVideos, errorList
 }
 
-func downloadYoutubeVideo(videoId string, wg *sync.WaitGroup, errCh chan<- error) error {
-
+// TODO: Investigate why [] getting added to video titles
+func downloadYoutubeVideo(video ExtractedVideoInfo, wg *sync.WaitGroup, errCh chan<- error, videoCh chan<- ExtractedVideoInfo) error {
 	defer wg.Done()
+
 	dl := ytdlp.New().
 		FlatPlaylist().
 		ExtractAudio().
 		AudioQuality("0").
 		Paths("/downloads").
+		Output("%(id)s.%(ext)s").
+		RestrictFilenames().
 		Continue()
 
-	var ytString strings.Builder
-
-	ytString.WriteString("https://www.youtube.com/watch?v=")
-	ytString.WriteString(videoId)
-
-	result, err := dl.Run(context.TODO(), ytString.String())
+	result, err := dl.Run(context.TODO(), video.WebpageURL)
 
 	errCh <- err
-	fmt.Print(result)
+
+	//If the video downloaded, add it to the video channel
+	if err == nil {
+		videoCh <- video
+	}
+
+	fmt.Println(result.Stdout)
 
 	return nil
 

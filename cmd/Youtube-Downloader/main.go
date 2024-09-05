@@ -50,22 +50,27 @@ func main() {
 
 	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
 
-	// err = env.drop.GetAccount()
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	fmt.Print(vidsToDownload)
 
-	// var path string = "./test2.txt"
-	// err = env.drop.UploadFile(&path)
+	downloadedVideos, errorList := youtube.DownloadYoutubeVideos(vidsToDownload)
 
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	for _, e := range errorList {
+		fmt.Println(e)
+	}
 
-	youtube.DownloadYoutubeVideos(vidsToDownload)
+	for _, e := range downloadedVideos {
+		fmt.Println(e)
+	}
+	// fmt.Print("CCCCCCCCCCCCCCCCCCCCCCCCCCC")
+	uploadedVideos, errorList2 := env.drop.UploadFiles(downloadedVideos)
+
+	for _, e := range errorList2 {
+		fmt.Println(e)
+	}
+	for _, e := range uploadedVideos {
+		fmt.Println(e)
+	}
+
 }
 
 func (env *Env) initializeDB() {
@@ -90,8 +95,8 @@ func (env *Env) testquery() {
 
 // Checks videos currently in playlist to videos in db
 // returns slice that contains all videos in playlist that are not in db
-func comparePlaylistAndDB(yt []youtube.ExtractedVideoInfo, db []string) []string {
-	var videosToDownload []string
+func comparePlaylistAndDB(yt []youtube.ExtractedVideoInfo, db []string) []youtube.ExtractedVideoInfo {
+	var videosToDownload []youtube.ExtractedVideoInfo
 
 	for _, v := range yt {
 
@@ -100,7 +105,12 @@ func comparePlaylistAndDB(yt []youtube.ExtractedVideoInfo, db []string) []string
 		// }
 
 		if !slices.Contains(db, v.Video_ID) {
-			videosToDownload = append(videosToDownload, v.Video_ID)
+			// videosToDownload = append(videosToDownload, v.Video_ID)
+			videosToDownload = append(videosToDownload, youtube.ExtractedVideoInfo{
+				Title:      v.Title,
+				Video_ID:   v.Video_ID,
+				WebpageURL: v.WebpageURL,
+			})
 		}
 	}
 

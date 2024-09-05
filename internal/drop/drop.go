@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/cortlando/youtube-downloader/internal/youtube"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/auth"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
@@ -55,13 +59,79 @@ func (d DropboxModel) GetAccount() error {
 	return nil
 }
 
-func (d DropboxModel) UploadFile(filepath *string) error {
-	//Opens file
+// Figure out a way to track which videos get uploaded successfully, and which dont
+// TODO:Refactor this code so that it opens the download directory, and then gets the file names that way
+func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedVideoInfo) ([]youtube.ExtractedVideoInfo, []error) {
 
-	file, err := os.Open(*filepath)
+	fmt.Print("Starting UploadFiles \n")
+	wg := sync.WaitGroup{}
+
+	errCh := make(chan error, len(downloadedVideos))
+	videoCh := make(chan youtube.ExtractedVideoInfo, len(downloadedVideos))
+
+	var uploadedVideos []youtube.ExtractedVideoInfo
+	var errorList []error
+
+	//Use this to loop over the downloaded videos, instead of passing in an array
+	c, err := os.ReadDir("./downloads")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, file := range c {
+		wg.Add(1)
+
+		info, _ := file.Info()
+
+		titleNoExtension := strings.Split(info.Name(), ".")
+
+		video := downloadedVideos[titleNoExtension[0]]
+
+		// fmt.Println(info.Name(), downloadedVideos[i])
+
+		pathToFile := fmt.Sprintf("./downloads/%s", file.Name())
+		uploadPath := fmt.Sprintf("/%s.%s", video.Title, titleNoExtension[1])
+
+		go d.UploadFile(&pathToFile, &uploadPath, &wg, errCh, videoCh, downloadedVideos[titleNoExtension[0]])
+	}
+
+	go func() {
+		wg.Wait()
+		fmt.Print(len(errCh))
+		fmt.Print(len(videoCh))
+		close(videoCh)
+		close(errCh)
+	}()
+
+	for e := range errCh {
+		if e != nil {
+
+			errorList = append(errorList, e)
+		}
+
+	}
+
+	//Returns a slice of videos that downloaded successfully
+	//I can pass this to the db and dropbox functions
+	for v := range videoCh {
+
+		uploadedVideos = append(uploadedVideos, v)
+
+	}
+
+	return uploadedVideos, errorList
+}
+
+func (d DropboxModel) UploadFile(pathToFile *string, uploadPath *string, wg *sync.WaitGroup, errCh chan<- error, videoCh chan<- youtube.ExtractedVideoInfo, video youtube.ExtractedVideoInfo) error {
+	//Opens file
+	defer wg.Done()
+	fmt.Print("Starting UploadFile Singuler:")
+	fmt.Print(*pathToFile)
+	fmt.Print("\n")
+	file, err := os.Open(*pathToFile)
 
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	defer file.Close()
@@ -70,11 +140,11 @@ func (d DropboxModel) UploadFile(filepath *string) error {
 	fileInfo, err := file.Stat()
 
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	//Sets the info for downloading, argument is path of file on dropbox
-	commitInfo := files.NewCommitInfo("/yuppers'")
+	commitInfo := files.NewCommitInfo(*uploadPath)
 
 	//Set to overwrite file on dropbox, if uploading something that already exists
 	commitInfo.Mode.Tag = "overwrite"
@@ -82,8 +152,8 @@ func (d DropboxModel) UploadFile(filepath *string) error {
 	// ts := time.Now().UTC().Round(time.Second)
 	// commitInfo.ClientModified = &ts
 
-	//arg is path to file thats being uploaded
-	fileUploadArg := files.NewUploadArg("/test.txt")
+	//argument is path of file on dropbox
+	fileUploadArg := files.NewUploadArg(*uploadPath)
 
 	fileUploadArg.Mode.Tag = "overwrite"
 
@@ -93,6 +163,12 @@ func (d DropboxModel) UploadFile(filepath *string) error {
 		return d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
 	} else {
 		res, err := d.file.Upload(fileUploadArg, file)
+
+		errCh <- err
+
+		if err == nil {
+			videoCh <- video
+		}
 
 		fmt.Print(res)
 
