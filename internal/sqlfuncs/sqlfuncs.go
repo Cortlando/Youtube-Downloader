@@ -1,6 +1,7 @@
 package sqlfuncs
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 
 	"os"
 
+	"github.com/cortlando/youtube-downloader/internal/youtube"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -64,6 +66,61 @@ func (m YoutubeVideoModel) TestInsertIntoTable() error {
 
 	return err
 }
+
+func (m YoutubeVideoModel) InsertYoutubeVideosIntoTable(uploadedVideos []youtube.ExtractedVideoInfo) {
+	stmt, err := m.DB.PrepareContext(context.TODO(), "INSERT INTO youtubevideos(title, video_id, webpage_url) values (?, ?, ?)")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t0 := time.Now()
+
+	for _, v := range uploadedVideos {
+		_, err := stmt.ExecContext(context.TODO(), v.Title, v.Video_ID, v.WebpageURL)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+	}
+
+	fmt.Printf("\nInserts took: %v\n", time.Since(t0))
+
+}
+
+// func (m YoutubeVideoModel) InsertYoutubeVideosIntoTable(uploadedVideos []youtube.ExtractedVideoInfo) {
+// 	stmt, err := m.DB.PrepareContext(context.TODO(), "INSERT INTO youtubevideos(title, video_id, webpage_url) values (?, ?, ?)")
+// 	wg := sync.WaitGroup{}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	t0 := time.Now()
+
+// 	for _, v := range uploadedVideos {
+// 		wg.Add(1)
+
+// 		go func() {
+// 			defer wg.Done()
+// 			_, err := stmt.ExecContext(context.TODO(), v.Title, v.Video_ID, v.WebpageURL)
+
+// 			if err != nil {
+// 				log.Fatal(err)
+// 			}
+
+// 		}()
+
+// 		// _, err := stmt.ExecContext(context.TODO(), v.Title, v.Video_ID, v.WebpageURL)
+
+// 		// if err != nil {
+// 		// 	log.Fatal(err)
+// 		// }
+
+// 	}
+
+// 	fmt.Printf("\nInserts took: %v\n", time.Since(t0))
+// }
 
 func (m YoutubeVideoModel) TestSelectFromTable() ([]YoutubeVideo, error) {
 	rows, err := m.DB.Query("SELECT * FROM  youtubevideos")

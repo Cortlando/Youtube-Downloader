@@ -50,7 +50,12 @@ func main() {
 
 	vidsToDownload := comparePlaylistAndDB(extractedVideosFromPlaylist, vidsInDB)
 
-	fmt.Print(vidsToDownload)
+	if len(vidsToDownload) == 0 {
+		fmt.Println("There are no new videos to download")
+		return
+	}
+
+	fmt.Println(vidsToDownload)
 
 	downloadedVideos, errorList := youtube.DownloadYoutubeVideos(vidsToDownload)
 
@@ -61,7 +66,12 @@ func main() {
 	for _, e := range downloadedVideos {
 		fmt.Println(e)
 	}
-	// fmt.Print("CCCCCCCCCCCCCCCCCCCCCCCCCCC")
+
+	if len(downloadedVideos) == 0 {
+		fmt.Println("No videos were downloaded")
+		return
+	}
+
 	uploadedVideos, errorList2 := env.drop.UploadFiles(downloadedVideos)
 
 	for _, e := range errorList2 {
@@ -70,6 +80,8 @@ func main() {
 	for _, e := range uploadedVideos {
 		fmt.Println(e)
 	}
+
+	env.youtubevideomodel.InsertYoutubeVideosIntoTable(uploadedVideos)
 
 }
 
