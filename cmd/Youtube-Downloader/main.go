@@ -30,10 +30,14 @@ func main() {
 
 	dropboxUser := drop.InitDropbox()
 
+	// fmt.Println(dropboxUser)
+
 	env := &Env{
 		youtubevideomodel: sqlfuncs.YoutubeVideoModel{DB: db},
 		drop:              dropboxUser,
 	}
+
+	// env.drop.GetAccount()
 
 	var extractedVideosFromPlaylist []youtube.ExtractedVideoInfo = youtube.GetVideosfromYoutubePlaylist()
 	youtube.PrintVideos(extractedVideosFromPlaylist)
@@ -63,9 +67,9 @@ func main() {
 		fmt.Println(e)
 	}
 
-	for _, e := range downloadedVideos {
-		fmt.Println(e)
-	}
+	// for _, e := range downloadedVideos {
+	// 	fmt.Println(e)
+	// }
 
 	if len(downloadedVideos) == 0 {
 		fmt.Println("No videos were downloaded")
@@ -77,9 +81,9 @@ func main() {
 	for _, e := range errorList2 {
 		fmt.Println(e)
 	}
-	for _, e := range uploadedVideos {
-		fmt.Println(e)
-	}
+	// for _, e := range uploadedVideos {
+	// 	fmt.Println(e)
+	// }
 
 	env.youtubevideomodel.InsertYoutubeVideosIntoTable(uploadedVideos)
 

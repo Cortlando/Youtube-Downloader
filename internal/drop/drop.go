@@ -2,9 +2,12 @@ package drop
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -30,17 +33,27 @@ type uploadChunk struct {
 	close  bool
 }
 
+type authResponse struct {
+	Access_token string
+	Token_type   string
+	Expires_in   int32
+}
+
 // TODO: Rework all this code becase returning users.New doesn't make sense,
 // I could return a users.New and files.new and put them in the same struct??????
 // Have to see if thats worth it or not
 func InitDropbox() DropboxModel {
-	token := os.Getenv("ACCESS_TOKEN")
+
+	token := GetNewToken()
 	config := dropbox.Config{
 		Token:    token,
 		LogLevel: dropbox.LogDebug, // if needed, set the desired logging level. Default is off
 	}
 	dbUser := users.New(config)
 	dbFiles := files.New(config)
+
+	fmt.Println(dbUser)
+	fmt.Println(dbFiles)
 
 	return DropboxModel{
 		user: dbUser,
@@ -49,8 +62,64 @@ func InitDropbox() DropboxModel {
 
 }
 
+func GetNewToken() string {
+	// API endpoint for token refresh
+	authUrl := "https://api.dropbox.com/oauth2/token"
+
+	// Create URL-encoded form data
+	formData := url.Values{}
+	formData.Set("grant_type", "refresh_token")
+	formData.Set("refresh_token", os.Getenv("REFRESH_TOKEN"))
+	formData.Set("client_id", os.Getenv("APP_KEY"))
+	formData.Set("client_secret", os.Getenv("APP_SECRET"))
+
+	// Create a new POST request
+	req, err := http.NewRequest("POST", authUrl, bytes.NewBufferString(formData.Encode()))
+	if err != nil {
+		log.Fatalf("Error creating request: %s", err.Error())
+
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Perform the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error performing request: %s", err.Error())
+
+	}
+	defer resp.Body.Close()
+
+	// Read and print the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body %s", err.Error())
+
+	}
+
+	fmt.Println("Response Status:", resp.Status)
+	fmt.Println("Response Body:", string(body))
+
+	var authRes authResponse
+
+	err = json.Unmarshal(body, &authRes)
+
+	if err != nil {
+		fmt.Println("Error parsing JSON: ", err.Error())
+		log.Fatalf("Error parsing JSON: %s", err.Error())
+
+	}
+
+	fmt.Println("Access Token:", authRes.Access_token)
+
+	return authRes.Access_token
+}
+
 func (d DropboxModel) GetAccount() error {
 	if resp, err := d.user.GetCurrentAccount(); err != nil {
+		println("broke")
 		return err
 	} else {
 		fmt.Printf("Name: %v", resp.Name)
