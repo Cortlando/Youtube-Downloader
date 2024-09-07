@@ -143,7 +143,7 @@ func downloadYoutubeVideo(video ExtractedVideoInfo, wg *sync.WaitGroup, errCh ch
 		FlatPlaylist().
 		ExtractAudio().
 		AudioQuality("0").
-		Paths("/downloads").
+		Paths("./downloads").
 		Output("%(id)s.%(ext)s").
 		RestrictFilenames().
 		Continue()

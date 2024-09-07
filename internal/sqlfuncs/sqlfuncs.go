@@ -27,23 +27,49 @@ type YoutubeVideoModel struct {
 	DB *sql.DB
 }
 
-const (
-	DB_PATH string = "./downloadedfiles.db?_journal=WAL&_timeout=5000"
-)
+// const (
+// 	DB_PATH string = "./downloadedfiles.db?_journal=WAL&_timeout=5000"
+// )
 
-func (m YoutubeVideoModel) CheckIfDBFIleExists() {
-	if _, err := os.Stat(DB_PATH); err == nil {
+// func (m YoutubeVideoModel) CheckIfDBFIleExists() {
+// 	if _, err := os.Stat(DB_PATH); err == nil {
+// 		fmt.Println("DB File exists")
+// 	} else if errors.Is(err, os.ErrNotExist) {
+// 		file, err := os.Create("./db/downloadedfiles.db")
+
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 		defer file.Close()
+// 	} else {
+// 		fmt.Println("This shouldn't happen")
+// 	}
+
+// }
+
+func CheckIfDBFIleExists() error {
+
+	if _, err := os.Stat(os.Getenv("DB_PATH")); err == nil {
 		fmt.Println("DB File exists")
 	} else if errors.Is(err, os.ErrNotExist) {
-		file, err := os.Create("downloadedfiles.db")
-		defer file.Close()
+		err := os.Mkdir("./db", 0777)
+		if err != nil {
+			return err
+		}
+
+		file, err := os.Create(os.Getenv("DB_PATH"))
 
 		if err != nil {
-			log.Fatal(err)
+			fmt.Print(err.Error())
+			return err
 		}
+		defer file.Close()
+
 	} else {
 		fmt.Println("This shouldn't happen")
 	}
+
+	return nil
 
 }
 

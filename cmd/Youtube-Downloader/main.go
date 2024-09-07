@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 
 	"github.com/cortlando/youtube-downloader/internal/drop"
@@ -13,14 +14,35 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// var db *sql.DB
+
+// var dropboxUser drop.DropboxModel
+
 type Env struct {
 	youtubevideomodel sqlfuncs.YoutubeVideoModel
 	drop              drop.DropboxModel
 }
 
+func init() {
+	err := sqlfuncs.CheckIfDBFIleExists()
+
+	if err != nil {
+		log.Fatalf("Unable to create db file: %s", err.Error())
+	}
+
+}
+
 func main() {
 	// loadEnvVar()
-	db, err := sql.Open("sqlite3", sqlfuncs.DB_PATH)
+
+	// err := sqlfuncs.CheckIfDBFIleExists()
+
+	// if err != nil {
+	// 	fmt.Print(err.Error())
+	// }
+	// path := os.Getenv("DB_PATH")
+
+	db, err := sql.Open("sqlite3", os.Getenv("DB_PATH_ARGS"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +52,7 @@ func main() {
 
 	dropboxUser := drop.InitDropbox()
 
-	// fmt.Println(dropboxUser)
+	fmt.Println(dropboxUser)
 
 	env := &Env{
 		youtubevideomodel: sqlfuncs.YoutubeVideoModel{DB: db},
@@ -42,7 +64,6 @@ func main() {
 	var extractedVideosFromPlaylist []youtube.ExtractedVideoInfo = youtube.GetVideosfromYoutubePlaylist()
 	youtube.PrintVideos(extractedVideosFromPlaylist)
 
-	env.initializeDB()
 	env.youtubevideomodel.CreateYoutubeVideoTableIfNotExist()
 	// env.youtubevideomodel.TestInsertIntoTable()
 
@@ -87,10 +108,6 @@ func main() {
 
 	env.youtubevideomodel.InsertYoutubeVideosIntoTable(uploadedVideos)
 
-}
-
-func (env *Env) initializeDB() {
-	env.youtubevideomodel.CheckIfDBFIleExists()
 }
 
 func (env *Env) initializeYoutubeTable() {
