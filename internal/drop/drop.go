@@ -20,7 +20,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const singleShotUploadSizeCutoff int64 = 32 * (1 << 20)
+// const singleShotUploadSizeCutoff int64 = 32 * (1 << 20)
+
+const singleShotUploadSizeCutoff int64 = 157286400
 
 type DropboxModel struct {
 	user users.Client
@@ -43,6 +45,7 @@ type authResponse struct {
 // I could return a users.New and files.new and put them in the same struct??????
 // Have to see if thats worth it or not
 func InitDropbox() DropboxModel {
+	fmt.Printf("File size cut off is: %d", singleShotUploadSizeCutoff)
 
 	token := GetNewToken()
 	config := dropbox.Config{
@@ -172,7 +175,8 @@ func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedV
 			if err != nil {
 				log.Fatal(err)
 			}
-
+			//Removes file when done uploading/trying to upload it
+			defer os.Remove(pathToFile)
 			defer file.Close()
 
 			//Gets information about the file
@@ -188,21 +192,17 @@ func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedV
 			//Set to overwrite file on dropbox, if uploading something that already exists
 			commitInfo.Mode.Tag = "overwrite"
 
-			// ts := time.Now().UTC().Round(time.Second)
-			// commitInfo.ClientModified = &ts
-
 			//argument is path of file on dropbox
 			fileUploadArg := files.NewUploadArg(uploadPath)
 
 			fileUploadArg.Mode.Tag = "overwrite"
 
 			if fileInfo.Size() > singleShotUploadSizeCutoff {
-				// return nil
-				// return d.uploadLargeFileConcurrent(file, fileInfo.Size(), commitInfo)
 				return d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
 			} else {
 				res, err := d.file.Upload(fileUploadArg, file)
 
+				//TODO:Delete the file after uploading it
 				errCh <- err
 
 				if err == nil {
@@ -216,6 +216,7 @@ func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedV
 				return err
 
 			}
+
 		})
 
 		// go d.UploadFile(&pathToFile, &uploadPath, &wg, errCh, videoCh, downloadedVideos[titleNoExtension[0]])
@@ -306,62 +307,62 @@ func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedV
 // 	}
 // }
 
-func (d DropboxModel) UploadFile(pathToFile *string, uploadPath *string, errCh chan<- error, videoCh chan<- youtube.ExtractedVideoInfo, video youtube.ExtractedVideoInfo) error {
-	//Opens file
+// func (d DropboxModel) UploadFile(pathToFile *string, uploadPath *string, errCh chan<- error, videoCh chan<- youtube.ExtractedVideoInfo, video youtube.ExtractedVideoInfo) error {
+// 	//Opens file
 
-	fmt.Print("Starting UploadFile Singuler:")
-	fmt.Print(*pathToFile)
-	fmt.Print("\n")
-	file, err := os.Open(*pathToFile)
+// 	fmt.Print("Starting UploadFile Singuler:")
+// 	fmt.Print(*pathToFile)
+// 	fmt.Print("\n")
+// 	file, err := os.Open(*pathToFile)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	defer file.Close()
+// 	defer file.Close()
 
-	//Gets information about the file
-	fileInfo, err := file.Stat()
+// 	//Gets information about the file
+// 	fileInfo, err := file.Stat()
 
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	//Sets the info for downloading, argument is path of file on dropbox
-	commitInfo := files.NewCommitInfo(*uploadPath)
+// 	//Sets the info for downloading, argument is path of file on dropbox
+// 	commitInfo := files.NewCommitInfo(*uploadPath)
 
-	//Set to overwrite file on dropbox, if uploading something that already exists
-	commitInfo.Mode.Tag = "overwrite"
+// 	//Set to overwrite file on dropbox, if uploading something that already exists
+// 	commitInfo.Mode.Tag = "overwrite"
 
-	// ts := time.Now().UTC().Round(time.Second)
-	// commitInfo.ClientModified = &ts
+// 	// ts := time.Now().UTC().Round(time.Second)
+// 	// commitInfo.ClientModified = &ts
 
-	//argument is path of file on dropbox
-	fileUploadArg := files.NewUploadArg(*uploadPath)
+// 	//argument is path of file on dropbox
+// 	fileUploadArg := files.NewUploadArg(*uploadPath)
 
-	fileUploadArg.Mode.Tag = "overwrite"
+// 	fileUploadArg.Mode.Tag = "overwrite"
 
-	if fileInfo.Size() > singleShotUploadSizeCutoff {
-		// return nil
-		// return d.uploadLargeFileConcurrent(file, fileInfo.Size(), commitInfo)
-		return d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
-	} else {
-		res, err := d.file.Upload(fileUploadArg, file)
+// 	if fileInfo.Size() > singleShotUploadSizeCutoff {
+// 		// return nil
+// 		// return d.uploadLargeFileConcurrent(file, fileInfo.Size(), commitInfo)
+// 		return d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
+// 	} else {
+// 		res, err := d.file.Upload(fileUploadArg, file)
 
-		errCh <- err
+// 		errCh <- err
 
-		if err == nil {
-			videoCh <- video
-		}
+// 		if err == nil {
+// 			videoCh <- video
+// 		}
 
-		fmt.Print(res)
+// 		fmt.Print(res)
 
-		fmt.Print("Finished uploading")
+// 		fmt.Print("Finished uploading")
 
-		return err
+// 		return err
 
-	}
-}
+// 	}
+// }
 
 func (d DropboxModel) uploadLargeFile(sizeOfFile int64, file io.Reader, commitInfo *files.CommitInfo) error {
 	//Size of data chucks being sent
