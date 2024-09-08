@@ -198,7 +198,13 @@ func (d DropboxModel) UploadFiles(downloadedVideos map[string]youtube.ExtractedV
 			fileUploadArg.Mode.Tag = "overwrite"
 
 			if fileInfo.Size() > singleShotUploadSizeCutoff {
-				return d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
+				err := d.uploadLargeFile(fileInfo.Size(), file, commitInfo)
+				errCh <- err
+
+				if err == nil {
+					videoCh <- video
+				}
+				return err
 			} else {
 				res, err := d.file.Upload(fileUploadArg, file)
 
