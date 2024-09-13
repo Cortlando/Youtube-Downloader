@@ -50,7 +50,8 @@ Build the program
 
 Run the executable 
 
-If getting error about yt-dlp, you'll have to install it manually [link](https://github.com/yt-dlp/yt-dlp)
+- If getting error about yt-dlp, you'll have to install it manually [link](https://github.com/yt-dlp/yt-dlp)
+- If getting this error "exec: "gcc": executable file not found in %PATH% when trying go build" check this [link](https://stackoverflow.com/questions/43580131/exec-gcc-executable-file-not-found-in-path-when-trying-go-build)
 ## Todo
 - Add volume to docker container for persistent storage
 - Add the ability to check playlists from soundcloud
